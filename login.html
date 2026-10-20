@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI智能选股系统 - 登录</title>
+    <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+    <div class="auth-card">
+        <div class="logo">&#x1F4CA;</div>
+        <h1 class="title">AI智能选股系统</h1>
+        <p class="subtitle">登录您的账号，继续智能投资之旅</p>
+
+        <form onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="username">账号</label>
+                <input type="text" id="username" placeholder="请输入用户名" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" placeholder="请输入密码" required autocomplete="current-password">
+            </div>
+
+            <button type="submit" class="btn-auth" id="loginBtn">登 录</button>
+
+            <div id="errorMsg" class="error-msg"></div>
+        </form>
+
+        <div class="auth-link">
+            没有账号？<a href="register.html">立即注册</a>
+        </div>
+    </div>
+
+    <script>
+        // 已登录则直接跳转主页
+        (function() {
+            if (localStorage.getItem('access_token')) {
+                window.location.href = 'index.html';
+            }
+        })();
+
+        async function handleLogin(event) {
+            event.preventDefault();
+
+            var username = document.getElementById('username').value.trim();
+            var password = document.getElementById('password').value;
+            var errorMsg = document.getElementById('errorMsg');
+            var btn = document.getElementById('loginBtn');
+
+            errorMsg.textContent = '';
+
+            if (!username || !password) { errorMsg.textContent = '请输入用户名和密码'; return; }
+
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+
+            try {
+                var response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: username, password: password }),
+                });
+
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                var data = await response.json();
+
+                if (data.success && data.token) {
+                    localStorage.setItem('access_token', data.token);
+                    localStorage.setItem('username', username);
+                    errorMsg.style.color = '#27ae60';
+                    errorMsg.textContent = '登录成功！1秒后跳转到主页...';
+                    setTimeout(function() { window.location.href = 'index.html'; }, 1000);
+                } else {
+                    errorMsg.style.color = '#e74c3c';
+                    errorMsg.textContent = data.message || '账号或密码错误';
+                    btn.disabled = false;
+                    btn.textContent = '登 录';
+                }
+            } catch (error) {
+                console.error('登录请求失败:', error);
+                errorMsg.style.color = '#e74c3c';
+                errorMsg.textContent = '网络请求失败，请检查后端服务是否启动';
+                btn.disabled = false;
+                btn.textContent = '登 录';
+            }
+        }
+    </script>
+</body>
+</html>

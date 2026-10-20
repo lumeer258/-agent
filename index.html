@@ -1,0 +1,1853 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金融新闻行情分析 Agent</title>
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- TradingView Lightweight Charts -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- ECharts 雷达图 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --accent-purple: #8b5cf6;
+        }
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            padding-top: 30px;
+            min-height: 100vh;
+        }
+        .main-container {
+            max-width: 1000px;
+            margin: auto;
+        }
+        .brand-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+        .brand-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 25px;
+        }
+        .form-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        .form-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        .form-control {
+            background: var(--primary-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+        }
+        .form-control:focus {
+            background: var(--primary-bg);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            color: var(--text-primary);
+        }
+        .btn-analyze {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        .btn-analyze:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+            color: white;
+        }
+        .btn-analyze:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .loading-box {
+            display: none;
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        .loading-box .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: var(--accent-blue);
+            margin-bottom: 15px;
+        }
+        .result-section {
+            display: none;
+        }
+        .result-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: border-color 0.2s;
+        }
+        .result-card:hover {
+            border-color: var(--accent-blue);
+        }
+        .card-header-custom {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .card-header-custom .icon-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .icon-blue { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+        .icon-green { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .icon-red { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+        .icon-yellow { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); }
+        .icon-purple { background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); }
+        .card-title-custom {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text-primary);
+        }
+        .conclusion-text {
+            font-size: 1.3rem;
+            font-weight: 700;
+            line-height: 1.5;
+            padding: 15px;
+            background: rgba(59, 130, 246, 0.08);
+            border-left: 4px solid var(--accent-blue);
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .badge-custom {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .badge-bullish { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .badge-bearish { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+        .badge-neutral { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); }
+        .badge-high { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+        .badge-medium { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); }
+        .badge-low { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .confidence-bar-container {
+            background: var(--primary-bg);
+            border-radius: 10px;
+            height: 12px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .confidence-bar {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 1s ease;
+        }
+        .score-item {
+            background: var(--primary-bg);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+        }
+        .score-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        .score-bar-container {
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            height: 8px;
+            overflow: hidden;
+        }
+        .score-bar {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 1s ease;
+        }
+        .risk-item {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .risk-item i { color: var(--accent-red); margin-top: 3px; }
+        .evidence-item {
+            padding: 10px 15px;
+            border-left: 3px solid var(--accent-blue);
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 0 6px 6px 0;
+            margin-bottom: 8px;
+            font-size: 0.92rem;
+        }
+        .evidence-item .evidence-source {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .step-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            position: relative;
+        }
+        .step-item:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 35px;
+            bottom: 0;
+            width: 2px;
+            background: var(--card-border);
+        }
+        .step-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 0.85rem;
+            z-index: 1;
+        }
+        .step-success { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .step-running { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); animation: pulse 1.5s infinite; }
+        .step-failed { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .step-content { flex: 1; }
+        .step-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 2px; }
+        .step-msg { color: var(--text-secondary); font-size: 0.88rem; }
+        .step-time { color: var(--text-secondary); font-size: 0.8rem; }
+        .tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; margin: 2px 4px 2px 0; }
+        .tag-blue { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+        .tag-green { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .tag-purple { background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); }
+        .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: var(--text-secondary); font-size: 0.9rem; }
+        .detail-value { font-weight: 500; font-size: 0.9rem; text-align: right; }
+        .disclaimer {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            padding: 20px 0;
+            opacity: 0.7;
+        }
+        /* 综合总结卡片 */
+        .summary-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.08));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .summary-text {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: var(--text-primary);
+        }
+        .summary-text .summary-section {
+            margin-bottom: 12px;
+        }
+        .summary-text .summary-label {
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-right: 6px;
+        }
+        .btn-copy-summary {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 6px;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-copy-summary:hover {
+            background: rgba(59, 130, 246, 0.25);
+        }
+        /* K 线图容器 */
+        #klineChart {
+            width: 100%;
+            height: 480px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .kline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .kline-header .stock-info {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        .metric-box {
+            text-align: center;
+            padding: 15px;
+            background: var(--primary-bg);
+            border-radius: 8px;
+        }
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        /* 基本面分析卡片 */
+        .fundamental-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .fundamental-section {
+            background: var(--primary-bg);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .fundamental-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .fundamental-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .fundamental-item:last-child { border-bottom: none; }
+        .fundamental-item .fi-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .fundamental-item .fi-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .fi-value.positive { color: var(--accent-red); }
+        .fi-value.negative { color: var(--accent-green); }
+        .fi-value.na { color: var(--text-secondary); font-weight: 400; font-style: italic; }
+        /* AI 智能选股区域 */
+        .select-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid var(--card-border);
+        }
+        .select-input-area {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+        }
+        .select-input-area .form-control {
+            flex: 1;
+        }
+        .btn-select {
+            background: linear-gradient(135deg, #10b981, #3b82f6);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+        .btn-select:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+            color: white;
+        }
+        .btn-select:disabled { opacity: 0.6; cursor: not-allowed; }
+        .stock-result-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .stock-result-item {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .stock-result-item:hover, .stock-result-item.active {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+        }
+        .stock-result-item .stock-name {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+        .stock-result-item .stock-code {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .stock-result-item .stock-price {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+        #radarChart {
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+        }
+        .generated-code-box {
+            background: var(--primary-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        /* 顶部导航栏 */
+        .top-navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 24px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--card-border);
+            margin: -20px -20px 20px -20px;
+        }
+        .top-navbar .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .top-navbar .user-info .username {
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+        .btn-logout {
+            padding: 6px 16px;
+            background: transparent;
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .btn-logout:hover {
+            background: var(--accent-red);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 登录检查：未登录则跳转到登录页 -->
+<script>
+(function() {
+    var token = localStorage.getItem('access_token');
+    if (!token) {
+        window.location.href = 'login.html';
+    }
+})();
+</script>
+
+<div class="main-container">
+    <!-- 顶部导航栏 -->
+    <div class="top-navbar">
+        <div class="user-info">
+            <i class="fas fa-user-circle" style="font-size:1.2rem;color:var(--accent-blue);"></i>
+            <span>当前用户：<span class="username" id="currentUser">--</span></span>
+        </div>
+        <button class="btn-logout" onclick="logout()">
+            <i class="fas fa-sign-out-alt me-1"></i>退出登录
+        </button>
+    </div>
+
+    <!-- 标题区 -->
+    <div class="text-center mb-4">
+        <h1 class="brand-title"><i class="fas fa-chart-line me-2"></i>金融新闻行情分析 Agent</h1>
+        <p class="brand-subtitle">基于智谱大模型的金融新闻深度投研 API 服务 v1.0</p>
+    </div>
+
+    <!-- 输入表单 -->
+    <div class="form-card">
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label">分析目标 (query)</label>
+                <input type="text" class="form-control" id="query" value="分析一下宁德时代最近的行情" placeholder="输入股票或市场分析">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">股票代码 (stock_code)</label>
+                <input type="text" class="form-control" id="stock_code" value="300750" placeholder="例如: 300750">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">时间范围 (time_range)</label>
+                <input type="text" class="form-control" id="time_range" value="6m" placeholder="例如: 6m">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button class="btn btn-analyze w-100" id="analyzeBtn">分析</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- K 线图卡片 -->
+    <div class="form-card" id="klineCard">
+        <div class="kline-header">
+            <div class="card-header-custom" style="margin-bottom:0;padding-bottom:0;border-bottom:none;">
+                <div class="icon-circle icon-purple"><i class="fas fa-chart-bar"></i></div>
+                <h5 class="card-title-custom">K 线走势图</h5>
+            </div>
+            <span class="stock-info" id="klineStockInfo"></span>
+        </div>
+        <div id="klineChart" class="mt-3"></div>
+        <div id="klineLoading" class="text-center py-4" style="display:none;color:var(--text-secondary);">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>加载K线数据中...
+        </div>
+    </div>
+
+    <!-- 基本面分析卡片 -->
+    <div class="form-card" id="fundamentalCard">
+        <div class="kline-header">
+            <div class="card-header-custom" style="margin-bottom:0;padding-bottom:0;border-bottom:none;">
+                <div class="icon-circle icon-green"><i class="fas fa-balance-scale"></i></div>
+                <h5 class="card-title-custom">基本面分析</h5>
+            </div>
+            <span class="stock-info" id="fundamentalInfo"></span>
+        </div>
+        <div id="fundamentalContent" class="mt-3"></div>
+        <div id="fundamentalLoading" class="text-center py-4" style="display:none;color:var(--text-secondary);">
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>加载基本面数据中...
+        </div>
+    </div>
+
+    <!-- 加载动画 -->
+    <div class="loading-box" id="loadingSpinner">
+        <div class="spinner-border" role="status"></div>
+        <h5>AI 正在深度分析中...</h5>
+        <p class="text-muted">正在抓取数据并进行多阶段深度思考，预计需要 60-90 秒</p>
+        <div class="progress mt-3" style="height: 6px; max-width: 300px; margin: auto; background: var(--card-border); border-radius: 3px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6);"></div>
+        </div>
+    </div>
+
+    <!-- 结果展示区 -->
+    <div class="result-section" id="resultArea">
+
+        <!-- 导出按钮 -->
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <button id="exportAnalysisPdfBtn" onclick="exportAnalysisPdf()" 
+                style="display:none;padding:6px 16px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.85rem;">
+                <i class="fas fa-file-pdf me-1"></i> 导出分析报告 PDF
+            </button>
+        </div>
+
+        <!-- 核心结论卡片 -->
+        <div class="result-card" id="cardConclusion">
+            <div class="card-header-custom">
+                <div class="icon-circle icon-blue"><i class="fas fa-lightbulb"></i></div>
+                <h5 class="card-title-custom">AI 投研核心结论</h5>
+            </div>
+            <div id="conclusionContent"></div>
+        </div>
+
+        <!-- 多维评分卡片 -->
+        <div class="result-card" id="cardScores">
+            <div class="card-header-custom">
+                <div class="icon-circle icon-purple"><i class="fas fa-chart-bar"></i></div>
+                <h5 class="card-title-custom">多维推理评分</h5>
+            </div>
+            <div id="scoresContent"></div>
+        </div>
+
+        <!-- 风险提示卡片 -->
+        <div class="result-card" id="cardRisks" style="display:none;">
+            <div class="card-header-custom">
+                <div class="icon-circle icon-red"><i class="fas fa-exclamation-triangle"></i></div>
+                <h5 class="card-title-custom">风险提示</h5>
+            </div>
+            <div id="risksContent"></div>
+        </div>
+
+        <!-- 证据与来源卡片 -->
+        <div class="result-card" id="cardEvidence">
+            <div class="card-header-custom">
+                <div class="icon-circle icon-green"><i class="fas fa-file-alt"></i></div>
+                <h5 class="card-title-custom">分析依据与来源</h5>
+            </div>
+            <div id="evidenceContent"></div>
+        </div>
+
+        <!-- 事件解析详情 -->
+        <div class="result-card" id="cardEvent" style="display:none;">
+            <div class="card-header-custom">
+                <div class="icon-circle icon-yellow"><i class="fas fa-search"></i></div>
+                <h5 class="card-title-custom">事件解析详情</h5>
+            </div>
+            <div id="eventContent"></div>
+        </div>
+
+        <!-- 思考过程 -->
+        <div class="result-card" id="cardThinking">
+            <div class="card-header-custom">
+                <div class="icon-circle icon-blue"><i class="fas fa-brain"></i></div>
+                <h5 class="card-title-custom">AI 思考过程</h5>
+            </div>
+            <div id="thinkingContent"></div>
+        </div>
+
+        <!-- 行情验证与反思 -->
+        <div class="result-card" id="cardVerification" style="display:none;">
+            <div class="card-header-custom">
+                <div class="icon-circle icon-green"><i class="fas fa-check-double"></i></div>
+                <h5 class="card-title-custom">行情验证与自我反思</h5>
+            </div>
+            <div id="verificationContent"></div>
+        </div>
+
+        <!-- 综合总结 -->
+        <div class="summary-card" id="cardSummary" style="display:none;">
+            <div class="card-header-custom">
+                <div class="icon-circle icon-blue"><i class="fas fa-file-signature"></i></div>
+                <h5 class="card-title-custom" style="flex:1;">AI 投研综合总结</h5>
+                <button class="btn-copy-summary" onclick="copySummary()"><i class="fas fa-copy me-1"></i>复制</button>
+            </div>
+            <div class="summary-text" id="summaryContent"></div>
+        </div>
+
+        <p class="disclaimer">本内容仅供参考，不构成投资建议。投资有风险，入市需谨慎。</p>
+    </div>
+</div>
+
+<!-- AI 智能选股区域 -->
+<div class="main-container">
+    <div class="select-section">
+        <div class="form-card">
+            <div class="card-header-custom">
+                <div class="icon-circle icon-green"><i class="fas fa-robot"></i></div>
+                <h5 class="card-title-custom">AI 自然语言智能选股</h5>
+            </div>
+            <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:15px;">
+                输入你的选股条件，AI 将自动筛选并生成六维雷达图评分
+            </p>
+            <div class="select-input-area">
+                <input type="text" class="form-control" id="selectQuery" 
+                       value="帮我找3只市盈率在20倍以内、ROE连续两年超过15%的科技股" 
+                       placeholder="例如：市盈率低于15倍、净利润增长超过30%的医药股">
+                <button class="btn btn-select" id="selectBtn" onclick="doAiSelect()">
+                    <i class="fas fa-search me-1"></i>智能选股
+                </button>
+            </div>
+
+            <!-- 加载状态 -->
+            <div id="selectLoading" style="display:none;text-align:center;padding:30px;color:var(--text-secondary);">
+                <div class="spinner-border me-2" role="status"></div>
+                <span>AI 正在分析选股条件，预计需要 30-60 秒...</span>
+            </div>
+
+            <!-- 选股结果 -->
+            <div id="selectResult" style="display:none;">
+                <div id="selectError" style="display:none;" class="mt-3"></div>
+                <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+                    <button id="exportPdfBtn" onclick="exportPdf()" 
+                        style="display:none;padding:6px 16px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.85rem;">
+                        <i class="fas fa-file-pdf me-1"></i> 导出 PDF 报告
+                    </button>
+                </div>
+                <div id="stockList" class="stock-result-list"></div>
+                <div id="radarChart"></div>
+                <details class="mt-3">
+                    <summary style="cursor:pointer;color:var(--text-secondary);font-size:0.9rem;">查看 AI 生成的选股代码</summary>
+                    <div class="generated-code-box" id="generatedCode"></div>
+                </details>
+                <details class="mt-2">
+                    <summary style="cursor:pointer;color:var(--accent-yellow);font-size:0.9rem;">
+                        <i class="fas fa-bug me-1"></i>查看调试信息（字段名/数据类型）
+                    </summary>
+                    <div class="generated-code-box" id="debugInfo" style="color:var(--accent-yellow);"></div>
+                </details>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- 历史分析记录区域 -->
+    <div class="container mt-4" style="margin-top: 40px !important;">
+        <h4 style="margin-bottom: 20px; color: #333;">历史分析记录</h4>
+        <div id="history-list">
+            <p>正在加载历史数据...</p>
+        </div>
+    </div>
+<script>
+document.getElementById('analyzeBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('analyzeBtn');
+    const loading = document.getElementById('loadingSpinner');
+    const resultArea = document.getElementById('resultArea');
+
+    const data = {
+        query: document.getElementById('query').value,
+        stock_code: document.getElementById('stock_code').value,
+        time_range: document.getElementById('time_range').value
+    };
+
+    btn.disabled = true;
+    btn.innerText = "分析中...";
+    loading.style.display = 'block';
+    resultArea.style.display = 'none';
+
+    // 联动：更新 K 线图
+    loadKline(data.stock_code);
+
+    try {
+        const response = await fetch('http://112.124.4.74:8001/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const json = await response.json();
+        currentAnalysisData = json;
+        renderResult(json);
+        resultArea.style.display = 'block';
+        // 显示导出按钮
+        document.getElementById('exportAnalysisPdfBtn').style.display = 'inline-block';
+    } catch (error) {
+        alert("请求失败，请检查后端服务是否在 112.124.4.74:8001 运行。\n\n错误: " + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "分析";
+        loading.style.display = 'none';
+    }
+});
+
+function renderResult(data) {
+    // === 核心结论 ===
+    const conclusionDiv = document.getElementById('conclusionContent');
+    let conclusionHTML = '';
+
+    // 操作建议
+    if (data.action_advice) {
+        conclusionHTML += '<div class="conclusion-text">' + data.action_advice + '</div>';
+    } else if (data.conclusion) {
+        conclusionHTML += '<div class="conclusion-text">' + data.conclusion + '</div>';
+    }
+
+    // 指标标签行
+    let metaHTML = '<div class="d-flex flex-wrap gap-3 mt-3">';
+
+    // 置信度
+    if (data.confidence !== undefined && data.confidence !== null) {
+        const confPct = Math.round(data.confidence * 100);
+        const confColor = confPct >= 70 ? 'var(--accent-green)' : confPct >= 40 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+        metaHTML += '<div class="metric-box" style="min-width:120px;">' +
+            '<div class="metric-value" style="color:' + confColor + '">' + confPct + '%</div>' +
+            '<div class="metric-label">置信度</div>' +
+            '<div class="confidence-bar-container mt-2">' +
+            '<div class="confidence-bar" style="width:' + confPct + '%;background:' + confColor + '"></div>' +
+            '</div></div>';
+    }
+
+    // 影响级别
+    if (data.impact_level) {
+        const levelClass = data.impact_level === '高' ? 'badge-high' : data.impact_level === '中' ? 'badge-medium' : 'badge-low';
+        metaHTML += '<div class="metric-box" style="min-width:120px;">' +
+            '<div class="metric-value badge-custom ' + levelClass + '" style="font-size:1.5rem;">' + data.impact_level + '</div>' +
+            '<div class="metric-label">影响级别</div></div>';
+    }
+
+    // 最终情绪
+    if (data.reflection_detail && data.reflection_detail.final_sentiment) {
+        const sent = data.reflection_detail.final_sentiment;
+        const sentClass = sent === '利好' ? 'badge-bullish' : sent === '利空' ? 'badge-bearish' : 'badge-neutral';
+        metaHTML += '<div class="metric-box" style="min-width:120px;">' +
+            '<div class="metric-value badge-custom ' + sentClass + '" style="font-size:1.5rem;">' + sent + '</div>' +
+            '<div class="metric-label">最终判断</div></div>';
+    }
+
+    metaHTML += '</div>';
+    conclusionHTML += metaHTML;
+
+    // 事件摘要
+    if (data.event_detail && data.event_detail.summary) {
+        conclusionHTML += '<div class="mt-3 p-3" style="background:var(--primary-bg);border-radius:8px;">' +
+            '<div class="text-muted" style="font-size:0.85rem;">事件摘要</div>' +
+            '<div style="font-size:0.95rem;margin-top:4px;">' + data.event_detail.summary + '</div>';
+        if (data.event_detail.entities && data.event_detail.entities.length) {
+            conclusionHTML += '<div class="mt-2">' +
+                data.event_detail.entities.map(function(e) { return '<span class="tag tag-blue">' + e + '</span>'; }).join('') + '</div>';
+        }
+        if (data.event_detail.event_type) {
+            conclusionHTML += '<div class="mt-1"><span class="tag tag-purple">' + data.event_detail.event_type + '</span></div>';
+        }
+        conclusionHTML += '</div>';
+    }
+
+    conclusionDiv.innerHTML = conclusionHTML;
+
+    // === 多维评分 ===
+    const scoresDiv = document.getElementById('scoresContent');
+    let scoresHTML = '';
+    const dimMap = {
+        'fundamental': { label: '基本面', icon: 'fa-coins' },
+        'capital': { label: '资金面', icon: 'fa-water' },
+        'sentiment': { label: '情绪面', icon: 'fa-smile' },
+        'policy': { label: '政策面', icon: 'fa-landmark' }
+    };
+
+    if (data.multi_dim_scores) {
+        for (const key in dimMap) {
+            if (!dimMap.hasOwnProperty(key)) continue;
+            const info = dimMap[key];
+            const dim = data.multi_dim_scores[key];
+            if (!dim || !dim.detail) continue;
+            const score = typeof dim.score === 'number' ? dim.score : 0.5;
+            const pct = Math.round(score * 100);
+            const barColor = score >= 0.7 ? 'var(--accent-green)' : score >= 0.4 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+            const impactBadge = dim.impact === '利好' ? 'badge-bullish' : dim.impact === '利空' ? 'badge-bearish' : 'badge-neutral';
+
+            scoresHTML += '<div class="score-item">' +
+                '<div class="score-label">' +
+                '<span><i class="fas ' + info.icon + ' me-2"></i>' + info.label + '</span>' +
+                '<span><span class="badge-custom ' + impactBadge + ' me-2">' + (dim.impact || '中性') + '</span>' +
+                '<span style="font-weight:600;">' + pct + '%</span></span></div>' +
+                '<div class="score-bar-container">' +
+                '<div class="score-bar" style="width:' + pct + '%;background:' + barColor + '"></div></div>' +
+                '<div style="font-size:0.85rem;color:var(--text-secondary);margin-top:6px;">' + dim.detail + '</div></div>';
+        }
+        // 推理链
+        if (data.multi_dim_scores.reasoning_chain) {
+            scoresHTML += '<div class="mt-3 p-3" style="background:var(--primary-bg);border-radius:8px;">' +
+                '<div class="text-muted" style="font-size:0.85rem;">推理链</div>' +
+                '<div style="font-size:0.95rem;margin-top:4px;line-height:1.6;">' + data.multi_dim_scores.reasoning_chain + '</div></div>';
+        }
+        // 风险因素
+        if (data.multi_dim_scores.risk_factors && data.multi_dim_scores.risk_factors.length > 0) {
+            scoresHTML += '<div class="mt-3">' +
+                '<div class="text-muted" style="font-size:0.85rem;">风险因素</div>' +
+                '<div class="mt-2">' +
+                data.multi_dim_scores.risk_factors.map(function(r) { return '<span class="tag tag-blue">' + r + '</span>'; }).join('') +
+                '</div></div>';
+        }
+    }
+    scoresDiv.innerHTML = scoresHTML || '<p class="text-muted">暂无多维评分数据</p>';
+
+    // === 风险提示 ===
+    const risksDiv = document.getElementById('risksContent');
+    let risksHTML = '';
+    let risksVisible = false;
+
+    if (data.reflection_detail && data.reflection_detail.issues_found && data.reflection_detail.issues_found.length > 0) {
+        risksVisible = true;
+        risksHTML += data.reflection_detail.issues_found.map(function(r) {
+            return '<div class="risk-item"><i class="fas fa-exclamation-circle"></i><div>' + r + '</div></div>';
+        }).join('');
+    }
+    if (data.risks && data.risks.length > 0) {
+        risksVisible = true;
+        risksHTML += data.risks.map(function(r) {
+            return '<div class="risk-item"><i class="fas fa-exclamation-circle"></i><div>' + r + '</div></div>';
+        }).join('');
+    }
+    if (data.verification_detail && data.verification_detail.warning) {
+        risksVisible = true;
+        risksHTML += '<div class="risk-item"><i class="fas fa-exclamation-circle"></i><div>行情验证警告: ' + data.verification_detail.warning + '</div></div>';
+    }
+
+    document.getElementById('cardRisks').style.display = risksVisible ? 'block' : 'none';
+    risksDiv.innerHTML = risksHTML || '<p class="text-muted">暂无风险提示</p>';
+
+    // === 证据 ===
+    const evidenceDiv = document.getElementById('evidenceContent');
+    let evidenceHTML = '';
+
+    if (data.evidence && data.evidence.length > 0) {
+        evidenceHTML = data.evidence.map(function(e) {
+            return '<div class="evidence-item">' +
+                '<div>' + e.content + '</div>' +
+                '<div class="evidence-source">' +
+                '<span class="tag tag-blue">' + (e.type || '其他') + '</span>' +
+                '<span class="tag tag-green">' + (e.source || '') + '</span></div></div>';
+        }).join('');
+    }
+    if (data.event_detail && data.event_detail.summary) {
+        evidenceHTML = '<div class="evidence-item">' +
+            '<div>事件: ' + data.event_detail.summary + '</div>' +
+            '<div class="evidence-source"><span class="tag tag-blue">事件解析</span></div></div>' + evidenceHTML;
+    }
+    evidenceDiv.innerHTML = evidenceHTML || '<p class="text-muted">暂无证据数据</p>';
+
+    // === 事件解析详情 ===
+    const eventDiv = document.getElementById('eventContent');
+    let eventHTML = '';
+    if (data.event_detail) {
+        const ed = data.event_detail;
+        eventHTML = '<div class="detail-row"><span class="detail-label">事件摘要</span><span class="detail-value">' + (ed.summary || '-') + '</span></div>' +
+            '<div class="detail-row"><span class="detail-label">事件类型</span><span class="detail-value">' + (ed.event_type || '-') + '</span></div>' +
+            '<div class="detail-row"><span class="detail-label">影响主体</span><span class="detail-value">' + (ed.entities ? ed.entities.join('、') : '-') + '</span></div>' +
+            '<div class="detail-row"><span class="detail-label">需要行情数据</span><span class="detail-value">' + (ed.need_market_data ? '是' : '否') + '</span></div>';
+        if (ed.related_stock_hint) {
+            eventHTML += '<div class="detail-row"><span class="detail-label">相关股票提示</span><span class="detail-value">' + ed.related_stock_hint + '</span></div>';
+        }
+        // 分析规划
+        if (data.plan_detail) {
+            const pd = data.plan_detail;
+            if (pd.key_questions && pd.key_questions.length) {
+                eventHTML += '<div class="mt-3"><strong style="font-size:0.95rem;">关键问题</strong>' +
+                    pd.key_questions.map(function(q) { return '<div style="padding:4px 0;font-size:0.92rem;">• ' + q + '</div>'; }).join('') + '</div>';
+            }
+            if (pd.analysis_focus) {
+                eventHTML += '<div class="mt-2"><div class="text-muted" style="font-size:0.85rem;">核心关注点</div>' +
+                    '<div style="font-size:0.92rem;">' + pd.analysis_focus + '</div></div>';
+            }
+        }
+    }
+    document.getElementById('cardEvent').style.display = data.event_detail ? 'block' : 'none';
+    eventDiv.innerHTML = eventHTML;
+
+    // === 思考过程 ===
+    const thinkingDiv = document.getElementById('thinkingContent');
+    let thinkingHTML = '';
+    if (data.thinking_log && data.thinking_log.length > 0) {
+        thinkingHTML = data.thinking_log.map(function(step) {
+            const iconClass = step.status === 'success' ? 'step-success' : step.status === 'failed' ? 'step-failed' : 'step-running';
+            const icon = step.status === 'success' ? 'fa-check' : step.status === 'failed' ? 'fa-times' : 'fa-spinner fa-spin';
+            const timeStr = step.duration_ms ? '<span class="step-time ms-2">' + step.duration_ms + 'ms</span>' : '';
+            return '<div class="step-item">' +
+                '<div class="step-icon ' + iconClass + '"><i class="fas ' + icon + '"></i></div>' +
+                '<div class="step-content">' +
+                '<div class="step-title">' + step.step + timeStr + '</div>' +
+                '<div class="step-msg">' + step.message + '</div></div></div>';
+        }).join('');
+    }
+    thinkingDiv.innerHTML = thinkingHTML || '<p class="text-muted">暂无思考日志</p>';
+
+    // === 行情验证与反思 ===
+    const verDiv = document.getElementById('verificationContent');
+    let verHTML = '';
+    let verVisible = false;
+
+    if (data.verification_detail) {
+        const vd = data.verification_detail;
+        verVisible = true;
+        const consistentText = vd.consistent === true ? '<span class="badge-custom badge-bullish">一致</span>' :
+                               vd.consistent === false ? '<span class="badge-custom badge-bearish">不一致</span>' :
+                               '<span class="badge-custom badge-neutral">未验证</span>';
+        verHTML += '<div class="detail-row"><span class="detail-label">行情验证</span><span class="detail-value">' + consistentText + '</span></div>';
+        if (vd.detail) {
+            verHTML += '<div class="detail-row"><span class="detail-label">验证详情</span><span class="detail-value">' + vd.detail + '</span></div>';
+        }
+        if (vd.warning) {
+            verHTML += '<div class="detail-row"><span class="detail-label">警告</span><span class="detail-value text-danger">' + vd.warning + '</span></div>';
+        }
+        if (vd.signals && vd.signals.length) {
+            verHTML += '<div class="mt-2">' +
+                '<div class="text-muted" style="font-size:0.85rem;">验证信号</div>' +
+                vd.signals.map(function(s) { return '<span class="tag tag-blue">' + s + '</span>'; }).join('') + '</div>';
+        }
+    }
+
+    if (data.reflection_detail) {
+        const rd = data.reflection_detail;
+        verVisible = true;
+        verHTML += '<div class="mt-3 pt-3" style="border-top:1px solid var(--card-border);"><strong style="font-size:0.95rem;">自我反思</strong></div>';
+
+        if (rd.issues_found && rd.issues_found.length > 0) {
+            verHTML += '<div class="mt-2">' +
+                '<div class="text-muted" style="font-size:0.85rem;">发现的问题</div>' +
+                rd.issues_found.map(function(i) { return '<div style="padding:3px 0;font-size:0.92rem;color:var(--accent-red);">• ' + i + '</div>'; }).join('') + '</div>';
+        }
+        if (rd.corrections && rd.corrections.length > 0) {
+            verHTML += '<div class="mt-2">' +
+                '<div class="text-muted" style="font-size:0.85rem;">修正建议</div>' +
+                rd.corrections.map(function(c) { return '<div style="padding:3px 0;font-size:0.92rem;">• ' + c + '</div>'; }).join('') + '</div>';
+        }
+        if (rd.reflection_detail) {
+            verHTML += '<div class="mt-2 p-3" style="background:var(--primary-bg);border-radius:8px;">' +
+                '<div style="font-size:0.92rem;line-height:1.6;">' + rd.reflection_detail + '</div></div>';
+        }
+        if (rd.confidence_adjustment !== undefined && rd.confidence_adjustment !== 0) {
+            const adjSign = rd.confidence_adjustment > 0 ? '+' : '';
+            const adjColor = rd.confidence_adjustment > 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            verHTML += '<div class="mt-2 detail-row">' +
+                '<span class="detail-label">置信度调整</span>' +
+                '<span class="detail-value" style="color:' + adjColor + ';">' + adjSign + rd.confidence_adjustment + '</span></div>';
+        }
+    }
+
+    document.getElementById('cardVerification').style.display = verVisible ? 'block' : 'none';
+    verDiv.innerHTML = verHTML;
+
+    // === 综合总结 ===
+    generateSummary(data);
+}
+
+/**
+ * 根据分析结果生成综合总结（纯前端模板拼接，无需额外 LLM 调用）
+ */
+function generateSummary(data) {
+    const card = document.getElementById('cardSummary');
+    const div = document.getElementById('summaryContent');
+    let html = '';
+
+    // 1. 核心结论
+    const conclusion = data.action_advice || data.conclusion || '';
+    if (conclusion) {
+        html += '<div class="summary-section"><span class="summary-label">【结论】</span>' + conclusion + '</div>';
+    }
+
+    // 2. 置信度 + 影响级别
+    let metaParts = [];
+    if (data.confidence !== undefined && data.confidence !== null) {
+        const pct = Math.round(data.confidence * 100);
+        const level = pct >= 70 ? '较高' : pct >= 40 ? '中等' : '较低';
+        metaParts.push('置信度 ' + pct + '%（' + level + '）');
+    }
+    if (data.impact_level) {
+        metaParts.push('影响级别：' + data.impact_level);
+    }
+    if (data.reflection_detail && data.reflection_detail.final_sentiment) {
+        metaParts.push('最终判断：' + data.reflection_detail.final_sentiment);
+    }
+    if (metaParts.length) {
+        html += '<div class="summary-section"><span class="summary-label">【评估】</span>' + metaParts.join('，') + '。</div>';
+    }
+
+    // 3. 多维评分摘要
+    if (data.multi_dim_scores) {
+        const dims = [];
+        const dimNames = { fundamental: '基本面', capital: '资金面', sentiment: '情绪面', policy: '政策面' };
+        for (const key in dimNames) {
+            const d = data.multi_dim_scores[key];
+            if (d && d.detail) {
+                const scorePct = Math.round((typeof d.score === 'number' ? d.score : 0.5) * 100);
+                dims.push(dimNames[key] + (d.impact || '中性') + '(' + scorePct + '分)');
+            }
+        }
+        if (dims.length) {
+            html += '<div class="summary-section"><span class="summary-label">【多维评分】</span>' + dims.join('；') + '。</div>';
+        }
+    }
+
+    // 4. 风险提示
+    const risks = [];
+    if (data.risks && data.risks.length) risks.push(...data.risks);
+    if (data.reflection_detail && data.reflection_detail.issues_found) {
+        risks.push(...data.reflection_detail.issues_found);
+    }
+    if (risks.length) {
+        html += '<div class="summary-section"><span class="summary-label" style="color:var(--accent-red);">【风险】</span>' +
+            risks.slice(0, 5).map(r => '• ' + r).join('<br>') + '</div>';
+    }
+
+    // 5. 操作建议
+    if (data.action_advice && data.action_advice !== conclusion) {
+        html += '<div class="summary-section"><span class="summary-label" style="color:var(--accent-green);">【建议】</span>' + data.action_advice + '</div>';
+    }
+
+    if (html) {
+        card.style.display = 'block';
+        div.innerHTML = html;
+    } else {
+        card.style.display = 'none';
+    }
+}
+
+/**
+ * 复制总结文本到剪贴板
+ */
+function copySummary() {
+    const div = document.getElementById('summaryContent');
+    const text = div.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.btn-copy-summary');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>已复制';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    }).catch(() => {
+        alert('复制失败，请手动选择文本复制');
+    });
+}
+</script>
+<script>
+// ============================================================
+// K 线图渲染（TradingView Lightweight Charts）
+// 包含：蜡烛图 + 成交量柱状图 + MA5/MA10/MA20 均线
+// ============================================================
+let klineChartInstance = null;
+let klineCandleSeries = null;
+let klineVolumeSeries = null;
+let klineMA5Series = null;
+let klineMA10Series = null;
+let klineMA20Series = null;
+
+/**
+ * 初始化或复用图表实例，创建所有 series（蜡烛 + 成交量 + 三条均线）
+ */
+function initKlineChart() {
+    const container = document.getElementById('klineChart');
+    if (!klineChartInstance) {
+        // 创建图表（深色背景）
+        klineChartInstance = LightweightCharts.createChart(container, {
+            width: container.clientWidth,
+            height: 480,
+            layout: {
+                background: { type: 'solid', color: '#131722' },
+                textColor: '#d1d4dc',
+            },
+            grid: {
+                vertLines: { color: 'rgba(42, 46, 57, 0.6)' },
+                horzLines: { color: 'rgba(42, 46, 57, 0.6)' },
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+            },
+            timeScale: {
+                borderColor: '#2a2e39',
+                timeVisible: false,
+            },
+            rightPriceScale: {
+                borderColor: '#2a2e39',
+            },
+        });
+
+        // ---- 蜡烛图 series ----
+        klineCandleSeries = klineChartInstance.addCandlestickSeries({
+            upColor: '#ef5350',         // 收盘涨 → 红色（A股习惯）
+            downColor: '#26a69a',       // 收盘跌 → 绿色
+            borderUpColor: '#ef5350',
+            borderDownColor: '#26a69a',
+            wickUpColor: '#ef5350',
+            wickDownColor: '#26a69a',
+        });
+
+        // ---- 成交量柱状图 series（独立 priceScale，压在底部） ----
+        klineVolumeSeries = klineChartInstance.addHistogramSeries({
+            priceFormat: { type: 'volume' },
+            priceScaleId: 'volume',     // 独立的价格轴
+        });
+        // 配置成交量 Y 轴：压缩到图表底部 20% 区域
+        klineChartInstance.priceScale('volume').applyOptions({
+            scaleMargins: { top: 0.8, bottom: 0 },
+        });
+
+        // ---- MA5 均线（黄色） ----
+        klineMA5Series = klineChartInstance.addLineSeries({
+            color: '#f6c744',
+            lineWidth: 1,
+            title: 'MA5',
+            priceLineVisible: false,
+            lastValueVisible: false,
+        });
+
+        // ---- MA10 均线（蓝色） ----
+        klineMA10Series = klineChartInstance.addLineSeries({
+            color: '#2962ff',
+            lineWidth: 1,
+            title: 'MA10',
+            priceLineVisible: false,
+            lastValueVisible: false,
+        });
+
+        // ---- MA20 均线（紫色） ----
+        klineMA20Series = klineChartInstance.addLineSeries({
+            color: '#e040fb',
+            lineWidth: 1,
+            title: 'MA20',
+            priceLineVisible: false,
+            lastValueVisible: false,
+        });
+
+        // 自适应容器宽度
+        window.addEventListener('resize', () => {
+            klineChartInstance.applyOptions({ width: container.clientWidth });
+        });
+    }
+}
+
+/**
+ * 从后端获取 K 线数据并渲染（蜡烛 + 成交量 + 均线）
+ */
+async function loadKline(stockCode) {
+    const loading = document.getElementById('klineLoading');
+    const info = document.getElementById('klineStockInfo');
+    loading.style.display = 'block';
+    info.textContent = '加载中...';
+
+    try {
+        const resp = await fetch('/api/kline?stock_code=' + stockCode + '&days=180');
+        const result = await resp.json();
+
+        if (result.code === 200 && result.data && result.data.length > 0) {
+            initKlineChart();
+
+            const data = result.data;
+
+            // ---- 蜡烛数据 ----
+            const candleData = data.map(d => ({
+                time: d.time,
+                open: d.open,
+                high: d.high,
+                low: d.low,
+                close: d.close,
+            }));
+            klineCandleSeries.setData(candleData);
+
+            // ---- 成交量数据（涨红跌绿，半透明） ----
+            const volumeData = data.map(d => ({
+                time: d.time,
+                value: d.volume,
+                color: d.close >= d.open
+                    ? 'rgba(239, 83, 80, 0.5)'    // 涨 → 红色半透明
+                    : 'rgba(38, 166, 154, 0.5)',  // 跌 → 绿色半透明
+            }));
+            klineVolumeSeries.setData(volumeData);
+
+            // ---- MA 均线数据（过滤 null 值） ----
+            const ma5Data = data.filter(d => d.ma5 !== null).map(d => ({ time: d.time, value: d.ma5 }));
+            const ma10Data = data.filter(d => d.ma10 !== null).map(d => ({ time: d.time, value: d.ma10 }));
+            const ma20Data = data.filter(d => d.ma20 !== null).map(d => ({ time: d.time, value: d.ma20 }));
+
+            klineMA5Series.setData(ma5Data);
+            klineMA10Series.setData(ma10Data);
+            klineMA20Series.setData(ma20Data);
+
+            // 自适应显示
+            klineChartInstance.timeScale().fitContent();
+
+            // ---- 显示股票信息 ----
+            const first = data[0];
+            const last = data[data.length - 1];
+            const change = last.close - first.open;
+            const changePct = ((change / first.open) * 100).toFixed(2);
+            const color = change >= 0 ? 'var(--accent-red)' : 'var(--accent-green)';
+            const sign = change >= 0 ? '+' : '';
+            info.innerHTML = '<span style="font-weight:600;">' + stockCode + '</span> ' +
+                '<span style="color:' + color + '">' + last.close + ' (' + sign + changePct + '%)</span> ' +
+                '<span style="font-size:0.8rem;">近' + data.length + '个交易日</span>' +
+                '&nbsp;&nbsp;' +
+                '<span style="color:#f6c744;font-size:0.8rem;">━ MA5</span> ' +
+                '<span style="color:#2962ff;font-size:0.8rem;">━ MA10</span> ' +
+                '<span style="color:#e040fb;font-size:0.8rem;">━ MA20</span>';
+        } else {
+            info.textContent = '暂无数据';
+        }
+    } catch (err) {
+        console.error('K线加载失败:', err);
+        info.textContent = '加载失败';
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+// 页面加载后自动拉取默认股票的 K 线
+window.addEventListener('DOMContentLoaded', () => {
+    const defaultCode = document.getElementById('stock_code').value || '300750';
+    loadKline(defaultCode);
+});
+
+// 股票代码输入框联动：按回车 或 失焦 时自动刷新 K 线图
+const stockCodeInput = document.getElementById('stock_code');
+stockCodeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const code = stockCodeInput.value.trim();
+        if (code) loadKline(code);
+    }
+});
+stockCodeInput.addEventListener('change', () => {
+    const code = stockCodeInput.value.trim();
+    if (code) loadKline(code);
+});
+
+// ============================================================
+// 基本面分析数据加载与渲染
+// ============================================================
+
+/**
+ * 从后端获取基本面数据并渲染
+ */
+async function loadFundamental(stockCode) {
+    const loading = document.getElementById('fundamentalLoading');
+    const info = document.getElementById('fundamentalInfo');
+    const content = document.getElementById('fundamentalContent');
+    loading.style.display = 'block';
+    info.textContent = '加载中...';
+    content.innerHTML = '';
+
+    try {
+        const resp = await fetch('/api/fundamental?stock_code=' + stockCode);
+        const result = await resp.json();
+
+        if (result.code === 200 && result.data) {
+            renderFundamental(result.data);
+            info.textContent = result.data.name ? `${result.data.name} (${stockCode})` : stockCode;
+        } else {
+            info.textContent = '暂无数据';
+            content.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:20px;">暂无基本面数据</p>';
+        }
+    } catch (err) {
+        console.error('基本面数据加载失败:', err);
+        info.textContent = '加载失败';
+        content.innerHTML = '<p style="color:var(--accent-red);text-align:center;padding:20px;">加载失败，请稍后重试</p>';
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+/**
+ * 渲染基本面数据到 HTML
+ */
+function renderFundamental(data) {
+    const content = document.getElementById('fundamentalContent');
+    let html = '<div class="fundamental-grid">';
+
+    // 1. 盈利能力
+    const p = data.profitability || {};
+    html += '<div class="fundamental-section">';
+    html += '<div class="fundamental-section-title"><i class="fas fa-coins"></i> 盈利能力</div>';
+    html += formatFundamentalItem('营业收入', formatLargeNumber(p.revenue));
+    html += formatFundamentalItem('净利润', formatLargeNumber(p.net_profit));
+    html += formatFundamentalItem('毛利率', formatPercent(p.gross_margin));
+    html += formatFundamentalItem('净利率', formatPercent(p.net_margin));
+    html += formatFundamentalItem('ROE', formatPercent(p.roe));
+    html += '</div>';
+
+    // 2. 成长性
+    const g = data.growth || {};
+    html += '<div class="fundamental-section">';
+    html += '<div class="fundamental-section-title"><i class="fas fa-chart-line"></i> 成长性</div>';
+    html += formatFundamentalItem('营收同比增长', formatPercentWithColor(g.revenue_yoy));
+    html += formatFundamentalItem('净利润同比增长', formatPercentWithColor(g.net_profit_yoy));
+    html += '</div>';
+
+    // 3. 财务健康
+    const h = data.health || {};
+    html += '<div class="fundamental-section">';
+    html += '<div class="fundamental-section-title"><i class="fas fa-shield-alt"></i> 财务健康</div>';
+    html += formatFundamentalItem('资产负债率', formatPercent(h.debt_ratio));
+    html += formatFundamentalItem('经营现金流净额', formatLargeNumber(h.operating_cashflow));
+    html += '</div>';
+
+    // 4. 估值指标
+    const v = data.valuation || {};
+    html += '<div class="fundamental-section">';
+    html += '<div class="fundamental-section-title"><i class="fas fa-tag"></i> 估值指标</div>';
+    html += formatFundamentalItem('市盈率(PE)', formatNumber(v.pe));
+    html += formatFundamentalItem('市净率(PB)', formatNumber(v.pb));
+    html += formatFundamentalItem('总市值', formatLargeNumber(v.market_cap));
+    html += formatFundamentalItem('流通市值', formatLargeNumber(v.float_market_cap));
+    html += '</div>';
+
+    html += '</div>';
+    content.innerHTML = html;
+}
+
+/**
+ * 格式化基本面数据项
+ */
+function formatFundamentalItem(label, valueHtml) {
+    return `<div class="fundamental-item"><span class="fi-label">${label}</span><span class="fi-value">${valueHtml}</span></div>`;
+}
+
+/**
+ * 格式化大数字（亿/万）
+ */
+function formatLargeNumber(val) {
+    if (val === null || val === undefined) return '<span class="na">-</span>';
+    const num = parseFloat(val);
+    if (isNaN(num)) return '<span class="na">-</span>';
+    if (Math.abs(num) >= 1e8) return (num / 1e8).toFixed(2) + ' 亿';
+    if (Math.abs(num) >= 1e4) return (num / 1e4).toFixed(2) + ' 万';
+    return num.toFixed(2);
+}
+
+/**
+ * 格式化百分比
+ */
+function formatPercent(val) {
+    if (val === null || val === undefined) return '<span class="na">-</span>';
+    const num = parseFloat(val);
+    if (isNaN(num)) return '<span class="na">-</span>';
+    return num.toFixed(2) + '%';
+}
+
+/**
+ * 格式化百分比（带颜色：正数红色，负数绿色）
+ */
+function formatPercentWithColor(val) {
+    if (val === null || val === undefined) return '<span class="na">-</span>';
+    const num = parseFloat(val);
+    if (isNaN(num)) return '<span class="na">-</span>';
+    const cls = num > 0 ? 'positive' : num < 0 ? 'negative' : '';
+    const sign = num > 0 ? '+' : '';
+    return `<span class="${cls}">${sign}${num.toFixed(2)}%</span>`;
+}
+
+/**
+ * 格式化普通数字
+ */
+function formatNumber(val) {
+    if (val === null || val === undefined) return '<span class="na">-</span>';
+    const num = parseFloat(val);
+    if (isNaN(num)) return '<span class="na">-</span>';
+    return num.toFixed(2);
+}
+
+// 页面加载后自动拉取默认股票的基本面数据
+window.addEventListener('DOMContentLoaded', () => {
+    const defaultCode = document.getElementById('stock_code').value || '300750';
+    loadFundamental(defaultCode);
+});
+
+// 股票代码变化时联动刷新基本面
+stockCodeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const code = stockCodeInput.value.trim();
+        if (code) loadFundamental(code);
+    }
+});
+stockCodeInput.addEventListener('change', () => {
+    const code = stockCodeInput.value.trim();
+    if (code) loadFundamental(code);
+});
+</script>
+<script>
+    // 页面加载完成后自动拉取历史分析记录
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const response = await fetch('/api/history');
+            const result = await response.json();
+
+            if (result.code === 200) {
+                const historyList = document.getElementById('history-list');
+                historyList.innerHTML = '';
+
+                if (result.data.length === 0) {
+                    historyList.innerHTML = '<p style="padding:10px;color:var(--text-secondary);">暂无历史记录</p>';
+                    return;
+                }
+
+                result.data.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'result-card';
+                    card.innerHTML = '<div class="d-flex justify-content-between align-items-center">' +
+                        '<div><strong>' + (item.query_text || '-') + '</strong>' +
+                        '<span class="tag tag-blue ms-2">' + (item.stock_code || '') + '</span></div>' +
+                        '<span class="tag tag-purple">' + (item.impact_level || '-') + '</span></div>' +
+                        '<div style="font-size:0.9rem;color:var(--text-secondary);margin-top:8px;">' +
+                        (item.core_conclusion || item.conclusion || '').substring(0, 100) + '</div>';
+                    historyList.appendChild(card);
+                });
+            }
+        } catch (error) {
+            console.error("加载历史记录失败:", error);
+        }
+    });
+</script>
+<script>
+// ============================================================
+// 登录状态与退出登录
+// ============================================================
+(function initUserDisplay() {
+    var username = localStorage.getItem('username');
+    if (username) {
+        document.getElementById('currentUser').textContent = username;
+    } else {
+        document.getElementById('currentUser').textContent = '未登录';
+    }
+})();
+
+function logout() {
+    if (confirm('确定要退出登录吗？')) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('username');
+        window.location.href = 'login.html';
+    }
+}
+</script>
+<script>
+// ============================================================
+// AI 智能选股 + ECharts 雷达图
+// ============================================================
+let radarChartInstance = null;
+let currentSelectData = null;  // 当前选股结果数据
+let currentAnalysisData = null; // 当前投研分析结果数据
+let selectedStockIndex = 0;    // 当前选中的股票索引
+
+/**
+ * 执行 AI 选股
+ */
+async function doAiSelect() {
+    const btn = document.getElementById('selectBtn');
+    const loading = document.getElementById('selectLoading');
+    const resultDiv = document.getElementById('selectResult');
+    const query = document.getElementById('selectQuery').value.trim();
+
+    if (!query) {
+        alert('请输入选股条件');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>分析中...';
+    loading.style.display = 'block';
+    resultDiv.style.display = 'none';
+
+    try {
+        const resp = await fetch('http://112.124.4.74:8001/api/ai-select', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: query, max_stocks: 10 }),
+        });
+        const result = await resp.json();
+
+        if (result.code === 200 && result.data) {
+            currentSelectData = result.data;
+            renderSelectResult(result.data);
+        } else {
+            showError('选股失败: ' + (result.data?.error || '未知错误'));
+        }
+    } catch (err) {
+        console.error('选股请求失败:', err);
+        showError('网络错误，请检查后端服务是否运行');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-search me-1"></i>智能选股';
+        loading.style.display = 'none';
+    }
+}
+
+/**
+ * 渲染选股结果
+ */
+function renderSelectResult(data) {
+    const resultDiv = document.getElementById('selectResult');
+    const errorDiv = document.getElementById('selectError');
+    const stockList = document.getElementById('stockList');
+    const codeBox = document.getElementById('generatedCode');
+    const debugBox = document.getElementById('debugInfo');
+
+    resultDiv.style.display = 'block';
+
+    // 显示调试信息
+    if (data.debug_info) {
+        debugBox.textContent = data.debug_info;
+    } else {
+        debugBox.textContent = '(无调试信息)';
+    }
+
+    // 显示错误
+    if (data.error) {
+        errorDiv.style.display = 'block';
+        errorDiv.innerHTML = '<div style="color:var(--accent-red);padding:10px;background:rgba(239,68,68,0.1);border-radius:8px;">' +
+            '<i class="fas fa-times-circle me-2"></i>' + data.error.replace(/\n/g, '<br>') + '</div>';
+    } else {
+        errorDiv.style.display = 'none';
+    }
+
+    // 显示生成的代码
+    if (data.generated_code) {
+        codeBox.textContent = data.generated_code;
+    }
+
+    // 显示股票列表
+    stockList.innerHTML = '';
+    if (data.stocks && data.stocks.length > 0) {
+        selectedStockIndex = 0;
+        data.stocks.forEach((stock, idx) => {
+            const item = document.createElement('div');
+            item.className = 'stock-result-item' + (idx === 0 ? ' active' : '');
+            item.onclick = () => selectStock(idx);
+
+            const priceStr = stock.price ? parseFloat(stock.price).toFixed(2) : '-';
+            const peStr = stock.pe ? 'PE:' + parseFloat(stock.pe).toFixed(1) : '';
+
+            item.innerHTML = '<div class="stock-name">' + (stock.name || '-') + '</div>' +
+                '<div class="stock-code">' + (stock.code || '-') + ' ' + peStr + '</div>' +
+                '<div class="stock-price" style="color:var(--accent-blue);">' + priceStr + '</div>';
+            stockList.appendChild(item);
+        });
+
+        // 初始化雷达图
+        initRadarChart(data.stocks[0]);
+
+        // 显示导出 PDF 按钮
+        document.getElementById('exportPdfBtn').style.display = 'inline-block';
+    } else {
+        stockList.innerHTML = '<p style="color:var(--text-secondary);grid-column:1/-1;text-align:center;">未找到符合条件的股票</p>';
+    }
+}
+
+/**
+ * 切换选中的股票
+ */
+function selectStock(idx) {
+    if (!currentSelectData || !currentSelectData.stocks) return;
+    selectedStockIndex = idx;
+
+    // 更新 UI 选中状态
+    const items = document.querySelectorAll('.stock-result-item');
+    items.forEach((item, i) => {
+        item.classList.toggle('active', i === idx);
+    });
+
+    // 更新雷达图
+    initRadarChart(currentSelectData.stocks[idx]);
+}
+
+/**
+ * 初始化/更新 ECharts 雷达图
+ */
+function initRadarChart(stock) {
+    const container = document.getElementById('radarChart');
+
+    if (!radarChartInstance) {
+        radarChartInstance = echarts.init(container, 'dark');
+    }
+
+    const scores = stock.radar_scores || {};
+    const indicators = [
+        { name: '成长性', max: 100 },
+        { name: '盈利能力', max: 100 },
+        { name: '估值安全', max: 100 },
+        { name: '技术强度', max: 100 },
+        { name: '资金热度', max: 100 },
+        { name: '抗风险能力', max: 100 },
+    ];
+    const values = indicators.map(ind => scores[ind.name] || 50);
+
+    const option = {
+        backgroundColor: 'transparent',
+        title: {
+            text: (stock.name || '-') + ' (' + (stock.code || '-') + ') 六维评分',
+            left: 'center',
+            textStyle: { color: '#d1d4dc', fontSize: 14 },
+        },
+        tooltip: {},
+        radar: {
+            indicator: indicators,
+            shape: 'polygon',
+            splitNumber: 5,
+            axisName: { color: '#94a3b8' },
+            splitLine: { lineStyle: { color: 'rgba(51, 65, 85, 0.5)' } },
+            splitArea: { areaStyle: { color: ['rgba(59, 130, 246, 0.02)', 'rgba(59, 130, 246, 0.05)'] } },
+            axisLine: { lineStyle: { color: 'rgba(51, 65, 85, 0.5)' } },
+        },
+        series: [{
+            type: 'radar',
+            data: [{
+                value: values,
+                name: stock.name || '-',
+                areaStyle: { color: 'rgba(59, 130, 246, 0.3)' },
+                lineStyle: { color: '#3b82f6', width: 2 },
+                itemStyle: { color: '#3b82f6' },
+            }],
+        }],
+    };
+
+    radarChartInstance.setOption(option, true);
+}
+
+/**
+ * 导出投研分析报告为 PDF
+ */
+async function exportAnalysisPdf() {
+    if (!currentAnalysisData) {
+        alert('没有可导出的分析数据');
+        return;
+    }
+
+    const btn = document.getElementById('exportAnalysisPdfBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> 生成中...';
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch('http://112.124.4.74:8001/api/export-analysis-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentAnalysisData),
+        });
+
+        if (!resp.ok) {
+            throw new Error('HTTP ' + resp.status);
+        }
+
+        const contentType = resp.headers.get('content-type');
+        if (contentType && contentType.includes('application/pdf')) {
+            const blob = await resp.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'AI投研分析报告.pdf';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            const errData = await resp.json();
+            alert('导出失败: ' + (errData.message || '未知错误'));
+        }
+    } catch (err) {
+        console.error('分析报告导出失败:', err);
+        alert('分析报告导出失败: ' + err.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+/**
+ * 导出选股结果为 PDF
+ */
+async function exportPdf() {
+    if (!currentSelectData || !currentSelectData.stocks || currentSelectData.stocks.length === 0) {
+        alert('没有可导出的选股数据');
+        return;
+    }
+
+    const btn = document.getElementById('exportPdfBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> 生成中...';
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch('http://112.124.4.74:8001/api/export-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stocks: currentSelectData.stocks }),
+        });
+
+        if (!resp.ok) {
+            throw new Error('HTTP ' + resp.status);
+        }
+
+        const contentType = resp.headers.get('content-type');
+        if (contentType && contentType.includes('application/pdf')) {
+            // 成功获取 PDF，触发下载
+            const blob = await resp.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'AI选股结果报告.pdf';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            // 返回了 JSON 错误信息
+            const errData = await resp.json();
+            alert('导出失败: ' + (errData.message || '未知错误'));
+        }
+    } catch (err) {
+        console.error('PDF 导出失败:', err);
+        alert('PDF 导出失败: ' + err.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+/**
+ * 显示错误信息
+ */
+function showError(msg) {
+    const resultDiv = document.getElementById('selectResult');
+    const errorDiv = document.getElementById('selectError');
+    resultDiv.style.display = 'block';
+    errorDiv.style.display = 'block';
+    errorDiv.innerHTML = '<div style="color:var(--accent-red);padding:10px;background:rgba(239,68,68,0.1);border-radius:8px;">' +
+        '<i class="fas fa-times-circle me-2"></i>' + msg + '</div>';
+}
+
+// 回车触发选股
+document.getElementById('selectQuery').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        doAiSelect();
+    }
+});
+
+// 窗口大小变化时重新调整雷达图
+window.addEventListener('resize', () => {
+    if (radarChartInstance) {
+        radarChartInstance.resize();
+    }
+});
+</script>
+</body>
+</html>

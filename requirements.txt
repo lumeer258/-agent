@@ -1,0 +1,32 @@
+# ========================================
+# 金融新闻行情分析 Agent - Python 依赖清单
+# ========================================
+# 安装方式：pip install -r requirements.txt
+
+# 金融数据获取（沪深300指数、财经快讯等）
+akshare
+
+# 智谱大模型 SDK（情感分析）
+zhipuai
+
+# 环境变量管理（从 .env 文件加载 API Key）
+python-dotenv
+
+# OpenAI 兼容接口（备用）
+openai
+
+# Web 框架与服务器
+fastapi
+uvicorn
+
+# 数据处理
+pandas
+
+# 用户认证系统
+sqlalchemy
+passlib[bcrypt]
+bcrypt==4.0.1
+python-jose[cryptography]
+
+# PDF 报告导出
+reportlab

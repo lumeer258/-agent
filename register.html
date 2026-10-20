@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI智能选股系统 - 注册</title>
+    <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+    <div class="auth-card">
+        <div class="logo">&#x1F4CA;</div>
+        <h1 class="title">AI智能选股系统</h1>
+        <p class="subtitle">创建您的账号，开始智能投资之旅</p>
+
+        <form onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label for="username">账号</label>
+                <input type="text" id="username" placeholder="请输入用户名（2-50个字符）" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" placeholder="请输入密码（至少6位）" required minlength="6" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">确认密码</label>
+                <input type="password" id="confirmPassword" placeholder="请再次输入密码" required autocomplete="new-password">
+            </div>
+
+            <button type="submit" class="btn-auth" id="registerBtn">注 册</button>
+
+            <div id="errorMsg" class="error-msg"></div>
+            <div id="successMsg" class="success-msg"></div>
+        </form>
+
+        <div class="auth-link">
+            已有账号？<a href="login.html">立即登录</a>
+        </div>
+    </div>
+
+    <script>
+        async function handleRegister(event) {
+            event.preventDefault();
+
+            var username = document.getElementById('username').value.trim();
+            var password = document.getElementById('password').value;
+            var confirmPassword = document.getElementById('confirmPassword').value;
+            var errorMsg = document.getElementById('errorMsg');
+            var successMsg = document.getElementById('successMsg');
+            var btn = document.getElementById('registerBtn');
+
+            errorMsg.textContent = '';
+            successMsg.textContent = '';
+
+            // 前端校验
+            if (!username) { errorMsg.textContent = '账号不能为空'; return; }
+            if (username.length < 2 || username.length > 50) { errorMsg.textContent = '账号长度需在 2-50 个字符之间'; return; }
+            if (password.length < 6) { errorMsg.textContent = '密码长度不能少于 6 位'; return; }
+            if (password !== confirmPassword) { errorMsg.textContent = '两次输入的密码不一致，请重新输入'; return; }
+
+            btn.disabled = true;
+            btn.textContent = '注册中...';
+
+            try {
+                var response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        confirm_password: confirmPassword,
+                    }),
+                });
+
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                var data = await response.json();
+
+                if (data.success) {
+                    successMsg.textContent = '注册成功！2秒后跳转到登录页面...';
+                    setTimeout(function() { window.location.href = 'login.html'; }, 2000);
+                } else {
+                    errorMsg.textContent = data.message || '注册失败，请稍后重试';
+                    btn.disabled = false;
+                    btn.textContent = '注 册';
+                }
+            } catch (error) {
+                console.error('注册请求失败:', error);
+                errorMsg.textContent = '网络请求失败，请检查后端服务是否启动';
+                btn.disabled = false;
+                btn.textContent = '注 册';
+            }
+        }
+    </script>
+</body>
+</html>
